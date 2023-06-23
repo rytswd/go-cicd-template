@@ -1,0 +1,5 @@
+/.direnv/
+
+# Go related
+go.work
+coverage.out

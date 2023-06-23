@@ -1,0 +1,51 @@
+name: Go Code Base Management
+
+on:
+  pull_request:
+    paths:
+      - example/**
+  push:
+    branches:
+      - main
+    paths:
+      - example/**
+
+env:
+  GO_VERSION: 1.20.5
+
+jobs:
+  build:
+    name: Build and Test # TODO: name needs to be reviewed
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+
+      - name: Restore cached test coverage
+        id: go-cached-test-coverage
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            ~/.cache/go-build     # Go build cache
+            ~/.cache/coverage.out # Any location that we generate the test coverage report in
+          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Go Build
+        run: |
+          go build ./example/with-test/...
+      - name: Go Test
+        run: |
+          go test ./example/with-test/... -coverprofile coverage.out -covermode count
+
+      - name: Check
+        run: |
+          prevCoverage=$(go tool cover -func=~/.cache/coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+'`)
+          newCoverage=$(go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
+          echo "Previous test coverage: $prevCoverage (taken from the cache)"
+          echo "New test coverage:      $newCoverage"
