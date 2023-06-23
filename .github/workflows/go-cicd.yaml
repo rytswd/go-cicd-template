@@ -4,14 +4,17 @@ on:
   pull_request:
     paths:
       - example/**
+      - .github/workflows/go-cicd.yaml
   push:
     branches:
       - main
     paths:
       - example/**
+      - .github/workflows/go-cicd.yaml
 
 env:
   GO_VERSION: 1.20.5
+  GO_WORKING_DIR: ./example/with-test/
 
 jobs:
   build:
@@ -29,7 +32,7 @@ jobs:
         id: go-cached-test-coverage
         uses: actions/cache@v3
         with:
-           # Any location that we generate the test coverage report in
+          # Any location that we generate the test coverage report in
           path: |
             ~/.cache/coverage.out
             ~/.cache/go-build
@@ -38,30 +41,31 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: go workspace
-        run: |
-          go work init
-          go work use ./example/with-test
       - name: go build
         run: |
-          go build ./example/with-test/...
+          go build ./...
+        working-directory: "${{ env.GO_WORKING_DIR }}"
       - name: go test
         run: |
-          go test ./example/with-test/... -coverprofile coverage.out -covermode count
+          go test ./... -coverprofile /tmp/coverage.out -covermode count
+        working-directory: "${{ env.GO_WORKING_DIR }}"
+
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
 
       - name: Check
         run: |
           if [[ -f ~/.cache/coverage.out ]]; then
           prevCoverage=$(go tool cover -func=~/.cache/coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
-          echo "Previous test coverage: $prevCoverage (taken from the cache)"
+          echo "Previous test coverage: ${prevCoverage}% (taken from the cache)"
           else
           echo "Previous test coverage: Not found"
           fi
-          newCoverage=$(go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
-          echo "New test coverage:      $newCoverage"
+          newCoverage=$(go tool cover -func=/tmp/coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
+          echo "New test coverage:      ${newCoverage}%"
 
       - name: Update cache
         if: always() &&
-            github.event_name != 'pull_request'
+          github.event_name != 'pull_request'
         run: |
-          cp coverage.out ~/.cache/coverage.out
+          cp /tmp/coverage.out ~/.cache/coverage.out
