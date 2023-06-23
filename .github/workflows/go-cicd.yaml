@@ -1,4 +1,5 @@
 name: Go Code Base Management
+run-name: Run PR management for ${{ github.ref }}, triggered by @${{ github.actor }}
 
 on:
   pull_request:
@@ -18,7 +19,7 @@ env:
 
 jobs:
   build:
-    name: Build and Test # TODO: name needs to be reviewed
+    name: Build, Test, Check Test Coverage
     runs-on: ubuntu-latest
     steps:
       - name: Check out
