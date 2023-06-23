@@ -14,7 +14,7 @@ func TestRGB(t *testing.T) {
 
 		want string
 	}{
-		"red": {
+		"Red": {
 			R:    255,
 			G:    0,
 			B:    0,

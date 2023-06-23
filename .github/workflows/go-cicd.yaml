@@ -27,25 +27,41 @@ jobs:
 
       - name: Restore cached test coverage
         id: go-cached-test-coverage
-        uses: actions/cache/restore@v3
+        uses: actions/cache@v3
         with:
+           # Any location that we generate the test coverage report in
           path: |
-            ~/.cache/go-build     # Go build cache
-            ~/.cache/coverage.out # Any location that we generate the test coverage report in
+            ~/.cache/coverage.out
+            ~/.cache/go-build
+            ~/go/pkg/mod
           key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
-      - name: Go Build
+      - name: go workspace
+        run: |
+          go work init
+          go work use ./example/with-test
+      - name: go build
         run: |
           go build ./example/with-test/...
-      - name: Go Test
+      - name: go test
         run: |
           go test ./example/with-test/... -coverprofile coverage.out -covermode count
 
       - name: Check
         run: |
-          prevCoverage=$(go tool cover -func=~/.cache/coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+'`)
-          newCoverage=$(go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
+          if [[ -f ~/.cache/coverage.out ]]; then
+          prevCoverage=$(go tool cover -func=~/.cache/coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
           echo "Previous test coverage: $prevCoverage (taken from the cache)"
+          else
+          echo "Previous test coverage: Not found"
+          fi
+          newCoverage=$(go tool cover -func=coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
           echo "New test coverage:      $newCoverage"
+
+      - name: Update cache
+        if: always() &&
+            github.event_name != 'pull_request'
+        run: |
+          cp coverage.out ~/.cache/coverage.out
