@@ -20,6 +20,12 @@ func TestRGB(t *testing.T) {
 			B:    0,
 			want: "ff0000",
 		},
+		"Green": {
+			R:    0,
+			G:    255,
+			B:    0,
+			want: "00ff00",
+		},
 	}
 
 	for name, tc := range cases {
