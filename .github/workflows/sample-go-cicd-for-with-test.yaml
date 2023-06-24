@@ -70,7 +70,7 @@ jobs:
         run: |
           ## Step 1. Check previous coverage
           if [[ -f ~/.cache/coverage.txt ]]; then
-          prevCoverage=$(cat ~/.cache/coverage.txt)
+          prevCoverage=$(cat ~/.cache/coverage.txt | grep total | grep -Eo '[0-9]+\.[0-9]+')
           echo "Previous test coverage: ${prevCoverage}% (taken from the cache)"
           else
           echo "Previous test coverage: Not found"
@@ -79,9 +79,9 @@ jobs:
           ## Step 2. Check new coverage
           # Get into directory so that go tool cover can work
           cd "${{ env.GO_WORKING_DIR }}"
-          newCoverage=$(go tool cover -func=/tmp/coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
+          go tool cover -func=/tmp/coverage.out > /tmp/coverage.txt
+          newCoverage=$(cat /tmp/coverage.txt | grep total | grep -Eo '[0-9]+\.[0-9]+')
           echo "New test coverage:      ${newCoverage}%"
-          echo "${newCoverage}" > /tmp/coverage.txt
           echo
 
           ## Step 3. Check previous coverage <= new coverage
