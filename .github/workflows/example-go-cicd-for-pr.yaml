@@ -144,11 +144,11 @@ jobs:
 
             #### Summary
 
-            | Coverage Type | Result |
-            | -- | -- |
-            | Threshold              | ${{ env.COVERAGE_THRESHOLD }}% |
-            | Previous Test Coverage | ${{ env.PREV_COVERAGE || 'Unknown' }}%      |
-            | New Test Coverage      | ${{ env.NEW_COVERAGE }}%       |
+            | Coverage Type          | Result                                 |
+            | ---------------------- | -------------------------------------- |
+            | Threshold              | ${{ env.COVERAGE_THRESHOLD }}%         |
+            | Previous Test Coverage | ${{ env.PREV_COVERAGE || 'Unknown' }}% |
+            | New Test Coverage      | ${{ env.NEW_COVERAGE }}%               |
 
             #### Status
 
