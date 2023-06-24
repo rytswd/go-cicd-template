@@ -1,5 +1,5 @@
-name: Go Code Base Management - for example/with-test
-run-name: SAMPLE - Run PR management for `${{ github.ref }}`, triggered by @${{ github.actor }}
+name: Go Code Management for `example/with-test`
+run-name: Run `example/with-test` CI/CD for `${{ github.ref }}`, triggered by @${{ github.actor }}
 
 # This Action is used for both PR and Push events. In case of PR, some steps
 # will be skipped (e.g. cache save), so that it can always refer to the valid
@@ -73,6 +73,9 @@ jobs:
       # - name: Setup tmate session
       #   uses: mxschmitt/action-tmate@v3
 
+      # Get test coverage from cache and coverage.out -- at this point, only
+      # work out the summary files, and some environment variables for more
+      # checks and steps to take place.
       - name: Get test coverage
         run: |
           ## Step 1. Check previous coverage
@@ -95,8 +98,12 @@ jobs:
           echo "PREV_COVERAGE=$prevCoverage" >> $GITHUB_ENV
           echo "NEW_COVERAGE=$newCoverage" >> $GITHUB_ENV
 
+      # Create a PR comment when run against PR -- this makes sure the code
+      # coverage becomes visible in the comment section, and also, whenever new
+      # change is made, the previous test reports will be minimised, leaving the
+      # only relevant comment.
       - name: Check and report
-        uses: actions/github-script@v6 # Node.js
+        uses: actions/github-script@v6 # Based on Node.js v16
         if: always() &&
           github.event_name == 'pull_request'
         with:
@@ -118,9 +125,9 @@ jobs:
             const overallStatus =
               ${{ env.COVERAGE_THRESHOLD }} > ${{ env.NEW_COVERAGE }} ?
                 "❌ FAIL: Coverage less than threshold of `${{ env.COVERAGE_THRESHOLD }}`" :
-                  ${{ env.PREV_COVERAGE || '0' }} > ${{ env.NEW_COVERAGE }} ?
-                  "❌ FAIL: Coverage less than the previous run" :
-                    "✅ PASS"
+              ${{ env.PREV_COVERAGE || '0' }} > ${{ env.NEW_COVERAGE }} ?
+                "❌ FAIL: Coverage less than the previous run" :
+                  "✅ PASS"
             const comment = `### 🔬 Go Test Coverage Report
 
             > Working Directory: \`${{ env.GO_WORKING_DIR }}\`
@@ -147,7 +154,7 @@ jobs:
             </details>
             `;
 
-            // 3. If any old comment is there, minimize all of them first.
+            // 3. If there are any old comments, minimize all of them first.
             for (const botComment of botComments) {
               core.notice("There was an old comment found in the PR, minimizing it.")
               const query = `mutation {
@@ -165,6 +172,8 @@ jobs:
               body: comment
             })
 
+      # Exit with non-zero value if the test coverage has decreased or not
+      # reached the threshold.
       - name: Check coverage status
         run: |
           echo "Coverage Threshold:     ${{ env.COVERAGE_THRESHOLD }}%"

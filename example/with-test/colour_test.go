@@ -5,8 +5,6 @@ import (
 )
 
 func TestRGB(t *testing.T) {
-	// var toHex float64 = 255
-
 	cases := map[string]struct {
 		R float64
 		G float64
