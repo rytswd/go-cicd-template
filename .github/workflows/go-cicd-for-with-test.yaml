@@ -20,6 +20,7 @@ on:
 
 jobs:
   build:
+    name: Build, Test, Coverage
     permissions:
       contents: read
       pull-requests: write
