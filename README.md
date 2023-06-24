@@ -6,7 +6,8 @@ dependencies (other than those from GitHub).
 You can go head to [`/.github/workflows`](/.github/workflows) to find more on
 how the CI/CD workflows are configured.
 
-> **Note**: This repository uses the [Reusable Workflow](https://docs.github.com/en/actions/using-workflows/reusing-workflows),
+> **Note**: This repository uses the [Reusable Workflow](https://docs.github.com/en/actions/using-workflows/reusing-workflows)
+> (to be precise, [`/.github/workflows/reusable-go-cicd-for-pr.yaml`](/.github/workflows/reusable-go-cicd-for-pr.yaml)),
 > which you _could_ use it as is. However, it is not designed to be used for all
 > cases, and is mainly meant for me to test the setup. While you can manage the
 > dependency using Git ref, I would advise not to use it directly. I cannot
