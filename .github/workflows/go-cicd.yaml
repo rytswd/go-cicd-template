@@ -1,5 +1,5 @@
 name: Go Code Base Management
-run-name: Run PR management for ${{ github.ref }}, triggered by @${{ github.actor }}
+run-name: Run PR management for `${{ github.ref }}`, triggered by @${{ github.actor }}
 
 on:
   pull_request:
@@ -51,12 +51,14 @@ jobs:
           go test ./... -coverprofile /tmp/coverage.out -covermode count
         working-directory: "${{ env.GO_WORKING_DIR }}"
 
+      # NOTE: If you want to debug the output interactively, comment this
+      #       step in, which would give you an SSH session.
       # - name: Setup tmate session
       #   uses: mxschmitt/action-tmate@v3
 
       - name: Check test coverage
         run: |
-          # Check previous coverage
+          ## Step 1. Check previous coverage
           if [[ -f ~/.cache/coverage.txt ]]; then
           prevCoverage=$(cat ~/.cache/coverage.txt)
           echo "Previous test coverage: ${prevCoverage}% (taken from the cache)"
@@ -64,11 +66,22 @@ jobs:
           echo "Previous test coverage: Not found"
           fi
 
+          ## Step 2. Check new coverage
           # Get into directory so that go tool cover can work
           cd "${{ env.GO_WORKING_DIR }}"
           newCoverage=$(go tool cover -func=/tmp/coverage.out | grep total | grep -Eo '[0-9]+\.[0-9]+')
           echo "New test coverage:      ${newCoverage}%"
           echo "${newCoverage}" > /tmp/coverage.txt
+          echo
+
+          ## Step 3. Check new coverage >= previous coverage
+          isNewWorse=$(bc <<< $prevCoverage > $newCoverage)
+          if (( $isNewWorse )); then
+          echo "ERROR: The new coverage is worse than the previous coverage, exiting as a failed check"
+          exit 1
+          else
+          echo "The new coverage is greater or equal to the previous coverage."
+          fi
 
       - name: Update cache
         if: always() &&
