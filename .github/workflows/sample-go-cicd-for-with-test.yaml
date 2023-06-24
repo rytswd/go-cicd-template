@@ -29,6 +29,9 @@ jobs:
   build:
     name: Build, Test, Check Test Coverage
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       # Initial setup
       - name: Check out
@@ -93,13 +96,15 @@ jobs:
           echo "NEW_COVERAGE=$newCoverage" >> $GITHUB_ENV
 
       - name: Check and report
-        uses: actions/github-script@v6
+        uses: actions/github-script@v6 # Node.js
         if: always() &&
           github.event_name == 'pull_request'
         with:
           retries: 3
           script: |
-            const report = await fetch('/tmp/coverage.txt').text()
+            const fs = require('fs/promises')
+
+            const report = await fs.readFile('/tmp/coverage.txt')
             const comment = `### Code Coverage Report
 
               Working Directory: \`${{ env.GO_WORKING_DIR }}\`
@@ -112,28 +117,14 @@ jobs:
 
               <details><summary>Show New Coverage</summary>
 
-              \`\`\`${report}\`\`\`
+              \`\`\`
+              ${report}
+              \`\`\`
 
               </details>
             `;
 
-            # If an old comment is there, minimize it first.
-            # const query = `mutation {
-            #   minimizeCommemutation MinimizeComment {
-            #     minimizeComment(input: {subjectId: "YOUR_COMMENT_ID"}) {
-            #       minimizedComment {
-            #         id
-            #         isMinimized
-            #       }
-            #     }
-            #   }
-            # }`;
-            # const variables = {
-            #   ...context.repo,
-            #   label: 'wontfix'
-            # }
-            # const result = await github.graphql(query, variables)
-
+            console.log(comment)
             github.rest.issues.createComment({
               ...context.repo,
               issue_number: context.issue.number,
