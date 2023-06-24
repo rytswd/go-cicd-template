@@ -1,0 +1,31 @@
+name: Go Code Management
+run-name: Run Go CI/CD for `${{ github.ref }}`, triggered by @${{ github.actor }}
+
+# For implementation details, please check out the example or reusable
+# workflows.
+
+on:
+  pull_request:
+    paths:
+      - example/with-test/**
+      - .github/workflows/reusable-go-cicd-for-pr.yaml
+      - .github/workflows/go-cicd-for-with-test.yaml
+  push:
+    branches:
+      - main
+    paths:
+      - example/with-test/**
+      - .github/workflows/reusable-go-cicd-for-pr.yaml
+      - .github/workflows/go-cicd-for-with-test.yaml
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      pull-requests: write
+    # uses: rytswd/go-cicd-template/.github/workflows/reusable-go-cicd-for-pr.yaml@main
+    uses: ./.github/workflows/reusable-go-cicd-for-pr.yaml
+    with:
+      GO_VERSION: "1.20.5"
+      GO_WORKING_DIR: "example/with-test"
+      COVERAGE_THRESHOLD: 10
