@@ -30,7 +30,7 @@ on:
 
 jobs:
   build:
-    name: Build, Test, Check Test Coverage
+    name: Build, Test, and Check Test Coverage
     runs-on: ubuntu-latest
     permissions:
       contents: read

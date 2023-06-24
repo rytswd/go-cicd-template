@@ -1,5 +1,5 @@
 name: Go Code Management
-run-name: Run Go CI/CD for `example/with-test` in `${{ github.ref }}`, triggered by @${{ github.actor }}
+run-name: Run Go CI/CD for `example/zero-test` in `${{ github.ref }}`, triggered by @${{ github.actor }}
 
 # For implementation details, please check out the example or reusable
 # workflows.
@@ -7,16 +7,16 @@ run-name: Run Go CI/CD for `example/with-test` in `${{ github.ref }}`, triggered
 on:
   pull_request:
     paths:
-      - example/with-test/**
+      - example/zero-test/**
       - .github/workflows/reusable-go-cicd-for-pr.yaml
-      - .github/workflows/go-cicd-for-with-test.yaml
+      - .github/workflows/go-cicd-for-zero-test.yaml
   push:
     branches:
       - main
     paths:
-      - example/with-test/**
+      - example/zero-test/**
       - .github/workflows/reusable-go-cicd-for-pr.yaml
-      - .github/workflows/go-cicd-for-with-test.yaml
+      - .github/workflows/go-cicd-for-zero-test.yaml
 
 jobs:
   build:
@@ -30,5 +30,5 @@ jobs:
     uses: ./.github/workflows/reusable-go-cicd-for-pr.yaml
     with:
       GO_VERSION: "1.20.5"
-      GO_WORKING_DIR: "example/with-test"
+      GO_WORKING_DIR: "example/zero-test"
       COVERAGE_THRESHOLD: 10
