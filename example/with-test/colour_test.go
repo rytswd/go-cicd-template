@@ -5,8 +5,6 @@ import (
 )
 
 func TestRGB(t *testing.T) {
-	// var toHex float64 = 255
-
 	cases := map[string]struct {
 		R float64
 		G float64
@@ -48,6 +46,12 @@ func TestHSL(t *testing.T) {
 
 		want string
 	}{
+		"Grey (808080)": {
+			H:    0,
+			S:    0,
+			L:    0.5,
+			want: "808080",
+		},
 		"Thistle (DECCF5)": {
 			H:    266.0 / 360, // Hue is a degree value
 			S:    67.0 / 100,  // Saturation is a percentage

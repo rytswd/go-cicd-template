@@ -15,6 +15,7 @@
 
         basePackages = with pkgs; [
           go
+          gh
           act
         ];
 

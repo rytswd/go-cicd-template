@@ -1,0 +1,34 @@
+name: Go Code Management
+run-name: Run Go CI/CD for `example/zero-test` in `${{ github.ref }}`, triggered by @${{ github.actor }}
+
+# For implementation details, please check out the example or reusable
+# workflows.
+
+on:
+  pull_request:
+    paths:
+      - example/zero-test/**
+      - .github/workflows/reusable-go-cicd-for-pr.yaml
+      - .github/workflows/go-cicd-for-zero-test.yaml
+  push:
+    branches:
+      - main
+    paths:
+      - example/zero-test/**
+      - .github/workflows/reusable-go-cicd-for-pr.yaml
+      - .github/workflows/go-cicd-for-zero-test.yaml
+
+jobs:
+  build:
+    # As the job would be displayed along with the reusable workflow name,
+    # keeping the name simple here.
+    name: Main
+    permissions:
+      contents: read
+      pull-requests: write
+    # uses: rytswd/go-cicd-template/.github/workflows/reusable-go-cicd-for-pr.yaml@main
+    uses: ./.github/workflows/reusable-go-cicd-for-pr.yaml
+    with:
+      GO_VERSION: "1.20.5"
+      GO_WORKING_DIR: "example/zero-test"
+      COVERAGE_THRESHOLD: 0 # Because there is no test, setting threshold to 0

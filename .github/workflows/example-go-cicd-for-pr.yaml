@@ -1,5 +1,15 @@
-name: Go Code Base Management - for example/zero-test
-run-name: SAMPLE - Run PR management for `${{ github.ref }}`, triggered by @${{ github.actor }}
+# ⚠️ EXAMPLE ONLY ⚠️
+#
+# This file is meant to be only an example, and is not actually run againts the
+# code in this repository. This is because this repository has more than a
+# single Go module, which means it would need separate workflow setup.
+#
+# For the actual jobs that are run in this repo, please refer to the "reusable
+# workflow" and also its consumer jobs.
+#
+
+name: Go Code Management
+run-name: Run Go CI/CD for `${{ github.ref }}`, triggered by @${{ github.actor }}
 
 # This Action is used for both PR and Push events. In case of PR, some steps
 # will be skipped (e.g. cache save), so that it can always refer to the valid
@@ -7,28 +17,28 @@ run-name: SAMPLE - Run PR management for `${{ github.ref }}`, triggered by @${{ 
 on:
   pull_request:
     paths:
-      - example/zero-test/**
-      - .github/workflows/sample-go-cicd-for-zero-test.yaml
+      - example/some-target-path/** # NOTE: This path does not exist
   push:
     branches:
       - main
     paths:
-      - example/zero-test/**
-      - .github/workflows/sample-go-cicd-for-zero-test.yaml
+      - example/some-target-path/** # NOTE: This path does not exist
 
-# The rest of action steps are written to take in the following enviromental
+# The rest of action steps are written to take in the following environment
 # variables. For simple setup, updating the following values should be
 # sufficient for adding the same logic to other code paths.
 env:
-  GO_VERSION: 1.20.5
-  GO_WORKING_DIR: ./example/zero-test/
+  GO_VERSION: "1.20.5"
+  GO_WORKING_DIR: "example/some-target-path"
   COVERAGE_THRESHOLD: "0"
-  CACHE_NAME: zero-test
 
 jobs:
   build:
     name: Build, Test, Check Test Coverage
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       # Initial setup
       - name: Check out
@@ -50,9 +60,9 @@ jobs:
             ~/.cache/coverage.txt
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: go-${{ env.CACHE_NAME }}-${{ hashFiles('**') }}
+          key: go-${{ env.GO_WORKING_DIR }}-${{ hashFiles('**') }}
           restore-keys: |
-            go-${{ env.CACHE_NAME }}-
+            go-${{ env.GO_WORKING_DIR }}-
 
       # Go build and test -- note how this saves the coverage into a /tmp/ dir,
       # so that it could be compared to the cached coverage data.
@@ -70,6 +80,9 @@ jobs:
       # - name: Setup tmate session
       #   uses: mxschmitt/action-tmate@v3
 
+      # Get test coverage from cache and coverage.out -- at this point, only
+      # work out the summary files, and some environment variables for more
+      # checks and steps to take place.
       - name: Get test coverage
         run: |
           ## Step 1. Check previous coverage
@@ -92,6 +105,84 @@ jobs:
           echo "PREV_COVERAGE=$prevCoverage" >> $GITHUB_ENV
           echo "NEW_COVERAGE=$newCoverage" >> $GITHUB_ENV
 
+      # Create a PR comment when run against PR -- this makes sure the code
+      # coverage becomes visible in the comment section, and also, whenever new
+      # change is made, the previous test reports will be minimised, leaving the
+      # only relevant comment.
+      - name: Check and report
+        uses: actions/github-script@v6 # Based on Node.js v16
+        if: always() &&
+          github.event_name == 'pull_request'
+        with:
+          retries: 3
+          script: |
+            const fs = require('fs/promises')
+
+            // 1. Retrieve existing bot comments for the PR
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: context.issue.number,
+            });
+            const botComments = comments.filter(comment => {
+              return comment.user.type === 'Bot' &&
+                comment.body.includes('Go Test Coverage Report') &&
+                comment.body.includes('${{ env.GO_WORKING_DIR }}')
+            });
+
+            // 2. Prepare comment
+            const report = await fs.readFile('/tmp/coverage.txt')
+            const overallStatus =
+              ${{ env.COVERAGE_THRESHOLD }} > ${{ env.NEW_COVERAGE }} ?
+                "❌ FAIL: Coverage less than threshold of `${{ env.COVERAGE_THRESHOLD }}`" :
+              ${{ env.PREV_COVERAGE || '0' }} > ${{ env.NEW_COVERAGE }} ?
+                "❌ FAIL: Coverage less than the previous run" :
+                  "✅ PASS"
+            const comment = `### 🔬 Go Test Coverage Report
+
+            > Working Directory: \`${{ env.GO_WORKING_DIR }}\`
+
+            #### Summary
+
+            | Coverage Type          | Result                                 |
+            | ---------------------- | -------------------------------------- |
+            | Threshold              | ${{ env.COVERAGE_THRESHOLD }}%         |
+            | Previous Test Coverage | ${{ env.PREV_COVERAGE || 'Unknown' }}% |
+            | New Test Coverage      | ${{ env.NEW_COVERAGE }}%               |
+
+            #### Status
+
+            ${overallStatus}
+
+            #### Detail
+
+            <details><summary>Show New Coverage</summary>
+
+            \`\`\`
+            ${report}\`\`\`
+
+            </details>
+            `;
+
+            // 3. If there are any old comments, minimize all of them first.
+            for (const botComment of botComments) {
+              core.notice("There was an old comment found in the PR, minimizing it.")
+              const query = `mutation {
+                minimizeComment(input: {classifier: OUTDATED, subjectId: "${botComment.node_id}"}) {
+                  clientMutationId
+                }
+              }`
+              await github.graphql(query)
+            }
+
+            // 4. Create a comment with the coverage report
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: comment
+            })
+
+      # Exit with non-zero value if the test coverage has decreased or not
+      # reached the threshold.
       - name: Check coverage status
         run: |
           echo "Coverage Threshold:     ${{ env.COVERAGE_THRESHOLD }}%"
