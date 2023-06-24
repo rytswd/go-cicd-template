@@ -29,16 +29,16 @@ jobs:
         with:
           go-version: "${{ env.GO_VERSION }}"
 
-      - name: Restore cached test coverage
-        id: go-cached-test-coverage
-        uses: actions/cache@v3
+      - name: Restore cache
+        id: go-cache
+        uses: actions/cache/restore@v3
         with:
           # Any location that we generate the test coverage report in
           path: |
             ~/.cache/coverage.txt
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
+          key: ${{ runner.os }}-${{ hashFiles('**') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
@@ -83,8 +83,20 @@ jobs:
           echo "The new coverage is greater or equal to the previous coverage."
           fi
 
-      - name: Update cache
+      - name: Copy coverage information for cache
         if: always() &&
           github.event_name != 'pull_request'
         run: |
           cp /tmp/coverage.txt ~/.cache/coverage.txt
+
+      - name: Save cache
+        if: always() &&
+          github.event_name != 'pull_request'
+        uses: actions/cache/save@v3
+        with:
+          key: ${{ steps.go-cache.outputs.cache-primary-key }}
+          # Any location that we generate the test coverage report in
+          path: |
+            ~/.cache/coverage.txt
+            ~/.cache/go-build
+            ~/go/pkg/mod
