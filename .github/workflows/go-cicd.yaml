@@ -22,6 +22,7 @@ jobs:
     name: Build, Test, Check Test Coverage
     runs-on: ubuntu-latest
     steps:
+      # Initial setup
       - name: Check out
         uses: actions/checkout@v3
       - name: Set up Go
@@ -29,6 +30,9 @@ jobs:
         with:
           go-version: "${{ env.GO_VERSION }}"
 
+      # Restore cache -- this is specifically using the restore action, so that
+      # we can control when and when not to save to the cache (i.e. if triggered
+      # via PR, do not save to the cache.)
       - name: Restore cache
         id: go-cache
         uses: actions/cache/restore@v3
@@ -42,6 +46,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
 
+      # Go build and test -- note how this saves the coverage into a /tmp/ dir,
+      # so that it could be compared to the cached coverage data.
       - name: go build
         run: |
           go build ./...
@@ -74,7 +80,7 @@ jobs:
           echo "${newCoverage}" > /tmp/coverage.txt
           echo
 
-          ## Step 3. Check new coverage >= previous coverage
+          ## Step 3. Check previous coverage <= new coverage
           isNewWorse=$(bc <<< $prevCoverage > $newCoverage)
           if (( $isNewWorse )); then
           echo "ERROR: The new coverage is worse than the previous coverage, exiting as a failed check"
@@ -83,12 +89,14 @@ jobs:
           echo "The new coverage is greater or equal to the previous coverage."
           fi
 
+      # If triggered from non-PR setup, copy the new coverage as the new cached data.
       - name: Copy coverage information for cache
         if: always() &&
           github.event_name != 'pull_request'
         run: |
           cp /tmp/coverage.txt ~/.cache/coverage.txt
 
+      # If triggered from non-PR setup, save the cache.
       - name: Save cache
         if: always() &&
           github.event_name != 'pull_request'
