@@ -16,12 +16,14 @@ on:
       - example/with-test/**
       - .github/workflows/sample-go-cicd-for-with-test.yaml
 
-# The rest of action steps are written to take in the following enviromental
+# The rest of action steps are written to take in the following environment
 # variables. For simple setup, updating the following values should be
 # sufficient for adding the same logic to other code paths.
 env:
-  GO_VERSION: 1.20.5
-  GO_WORKING_DIR: ./example/with-test/
+  GO_VERSION: "1.20.5"
+  GO_WORKING_DIR: "./example/with-test/"
+  COVERAGE_THRESHOLD: "0"
+  CACHE_NAME: with-test
 
 jobs:
   build:
@@ -48,7 +50,9 @@ jobs:
             ~/.cache/coverage.txt
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ env.GO_WORKING_DIR }}
+          key: go-${{ env.CACHE_NAME }}-${{ hashFiles('**') }}
+          restore-keys: |
+            go-${{ env.CACHE_NAME }}-
 
       # Go build and test -- note how this saves the coverage into a /tmp/ dir,
       # so that it could be compared to the cached coverage data.
@@ -66,7 +70,7 @@ jobs:
       # - name: Setup tmate session
       #   uses: mxschmitt/action-tmate@v3
 
-      - name: Check test coverage
+      - name: Get test coverage
         run: |
           ## Step 1. Check previous coverage
           if [[ -f ~/.cache/coverage.txt ]]; then
@@ -83,16 +87,79 @@ jobs:
           go tool cover -func=/tmp/coverage.out > /tmp/coverage.txt
           newCoverage=$(cat /tmp/coverage.txt | grep total | grep -Eo '[0-9]+\.[0-9]+')
           echo "New test coverage:      ${newCoverage}%"
+
+          ## Step 3. Set environment variables
+          echo "PREV_COVERAGE=$prevCoverage" >> $GITHUB_ENV
+          echo "NEW_COVERAGE=$newCoverage" >> $GITHUB_ENV
+
+      - name: Check and report
+        uses: actions/github-script@v6
+        if: always() &&
+          github.event_name == 'pull_request'
+        with:
+          retries: 3
+          script: |
+            const report = await fetch('/tmp/coverage.txt').text()
+            const comment = `### Code Coverage Report
+
+              Working Directory: \`${{ env.GO_WORKING_DIR }}\`
+
+              | Coverage Type | Result |
+              | -- | -- |
+              | Threshold              | ${{ env.COVERAGE_THRESHOLD }}% |
+              | Previous Test Coverage | ${{ env.PREV_COVERAGE }}%      |
+              | New Test Coverage      | ${{ env.NEW_COVERAGE }}%       |
+
+              <details><summary>Show New Coverage</summary>
+
+              \`\`\`${report}\`\`\`
+
+              </details>
+            `;
+
+            # If an old comment is there, minimize it first.
+            # const query = `mutation {
+            #   minimizeCommemutation MinimizeComment {
+            #     minimizeComment(input: {subjectId: "YOUR_COMMENT_ID"}) {
+            #       minimizedComment {
+            #         id
+            #         isMinimized
+            #       }
+            #     }
+            #   }
+            # }`;
+            # const variables = {
+            #   ...context.repo,
+            #   label: 'wontfix'
+            # }
+            # const result = await github.graphql(query, variables)
+
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: comment
+            })
+
+      - name: Check coverage status
+        run: |
+          echo "Coverage Threshold:     ${{ env.COVERAGE_THRESHOLD }}%"
+          echo "Previous test coverage: ${{ env.PREV_COVERAGE || 'Unknown' }}%"
+          echo "New test coverage:      ${{ env.NEW_COVERAGE }}%"
           echo
 
-          ## Step 3. Check previous coverage <= new coverage
-          isNewWorse=$(bc <<< $prevCoverage > $newCoverage)
-          if (( $isNewWorse )); then
-          echo "ERROR: The new coverage is worse than the previous coverage, exiting as a failed check"
+          isBelowThreshold=$(bc <<< "${{ env.COVERAGE_THRESHOLD }} > ${{ env.NEW_COVERAGE }}")
+          if (( $isBelowThreshold )); then
+          echo "ERROR: The test coverage is below the threshold, exiting as failed."
           exit 1
-          else
-          echo "The new coverage is greater or equal to the previous coverage."
           fi
+
+          isNewWorse=$(bc <<< "${{ env.PREV_COVERAGE || '0' }} > ${{ env.NEW_COVERAGE }}")
+          if (( $isNewWorse )); then
+          echo "ERROR: The new coverage is worse than the previous coverage, exiting as failed."
+          exit 1
+          fi
+
+          echo "The new coverage is greater or equal to the previous coverage, and passes the threshold."
 
       # If triggered from non-PR setup, copy the new coverage as the new cached data.
       - name: Copy coverage information for cache
