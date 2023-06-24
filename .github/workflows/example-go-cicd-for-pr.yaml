@@ -17,20 +17,19 @@ run-name: Run Go CI/CD for `${{ github.ref }}`, triggered by @${{ github.actor }
 on:
   pull_request:
     paths:
-      - example/with-test/** # NOTE: This path does not exist
-      - .github/workflows/example-go-cicd-for-pr.yaml
+      - example/some-target-path/** # NOTE: This path does not exist
   push:
     branches:
       - main
     paths:
-      - example/with-test/** # NOTE: This path does not exist
+      - example/some-target-path/** # NOTE: This path does not exist
 
 # The rest of action steps are written to take in the following environment
 # variables. For simple setup, updating the following values should be
 # sufficient for adding the same logic to other code paths.
 env:
   GO_VERSION: "1.20.5"
-  GO_WORKING_DIR: "example/with-test"
+  GO_WORKING_DIR: "example/some-target-path"
   COVERAGE_THRESHOLD: "0"
 
 jobs:
