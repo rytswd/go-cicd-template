@@ -1,5 +1,5 @@
 name: Go Code Base Management - for example/with-test
-run-name: Run PR management for `${{ github.ref }}`, triggered by @${{ github.actor }}
+run-name: SAMPLE - Run PR management for `${{ github.ref }}`, triggered by @${{ github.actor }}
 
 # This Action is used for both PR and Push events. In case of PR, some steps
 # will be skipped (e.g. cache save), so that it can always refer to the valid
@@ -70,7 +70,8 @@ jobs:
         run: |
           ## Step 1. Check previous coverage
           if [[ -f ~/.cache/coverage.txt ]]; then
-          prevCoverage=$(cat ~/.cache/coverage.txt | grep total | grep -Eo '[0-9]+\.[0-9]+')
+          prevCoverage=$(cat ~/.cache/coverage.txt | grep total | grep -Eo '[0-9]+\.[0-9]+' || echo "unknown")
+          # When it reports "unknown %", it means cache contained malformed data.
           echo "Previous test coverage: ${prevCoverage}% (taken from the cache)"
           else
           echo "Previous test coverage: Not found"
