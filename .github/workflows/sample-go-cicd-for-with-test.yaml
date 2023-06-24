@@ -104,27 +104,61 @@ jobs:
           script: |
             const fs = require('fs/promises')
 
+            // 1. Retrieve existing bot comments for the PR
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: context.issue.number,
+            });
+            const botComments = comments.filter(comment => {
+              return comment.user.type === 'Bot' && comment.body.includes('Go Test Coverage Report')
+            });
+
+            // 2. Prepare comment
             const report = await fs.readFile('/tmp/coverage.txt')
-            const comment = `### Code Coverage Report
+            const overallStatus =
+              ${{ env.COVERAGE_THRESHOLD }} > ${{ env.NEW_COVERAGE }} ?
+                "❌ FAIL: Coverage less than threshold of `${{ env.COVERAGE_THRESHOLD }}`" :
+                  ${{ env.PREV_COVERAGE || '0' }} > ${{ env.NEW_COVERAGE }} ?
+                  "❌ FAIL: Coverage less than the previous run" :
+                    "✅ PASS"
+            const comment = `### 🔬 Go Test Coverage Report
 
-              Working Directory: \`${{ env.GO_WORKING_DIR }}\`
+            > Working Directory: \`${{ env.GO_WORKING_DIR }}\`
 
-              | Coverage Type | Result |
-              | -- | -- |
-              | Threshold              | ${{ env.COVERAGE_THRESHOLD }}% |
-              | Previous Test Coverage | ${{ env.PREV_COVERAGE }}%      |
-              | New Test Coverage      | ${{ env.NEW_COVERAGE }}%       |
+            #### Summary
 
-              <details><summary>Show New Coverage</summary>
+            | Coverage Type | Result |
+            | -- | -- |
+            | Threshold              | ${{ env.COVERAGE_THRESHOLD }}% |
+            | Previous Test Coverage | ${{ env.PREV_COVERAGE }}%      |
+            | New Test Coverage      | ${{ env.NEW_COVERAGE }}%       |
 
-              \`\`\`
-              ${report}
-              \`\`\`
+            #### Status
 
-              </details>
+            ${overallStatus}
+
+            #### Detail
+
+            <details><summary>Show New Coverage</summary>
+
+            \`\`\`
+            ${report}\`\`\`
+
+            </details>
             `;
 
-            console.log(comment)
+            // 3. If any old comment is there, minimize all of them first.
+            for (const botComment of botComments) {
+              core.notice("There was an old comment found in the PR, minimizing it.")
+              const query = `mutation {
+                minimizeComment(input: {classifier: OUTDATED, subjectId: "${botComment.node_id}"}) {
+                  clientMutationId
+                }
+              }`
+              await github.graphql(query)
+            }
+
+            // 4. Create a comment with the coverage report
             github.rest.issues.createComment({
               ...context.repo,
               issue_number: context.issue.number,
