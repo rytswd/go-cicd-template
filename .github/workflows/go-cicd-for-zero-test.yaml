@@ -31,4 +31,4 @@ jobs:
     with:
       GO_VERSION: "1.20.5"
       GO_WORKING_DIR: "example/zero-test"
-      COVERAGE_THRESHOLD: 10
+      COVERAGE_THRESHOLD: 0 # Because there is no test, setting threshold to 0
