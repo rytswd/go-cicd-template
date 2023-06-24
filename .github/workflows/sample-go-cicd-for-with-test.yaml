@@ -8,13 +8,13 @@ on:
   pull_request:
     paths:
       - example/with-test/**
-      - .github/workflows/go-cicd.yaml
+      - .github/workflows/sample-go-cicd-for-with-test.yaml
   push:
     branches:
       - main
     paths:
       - example/with-test/**
-      - .github/workflows/go-cicd.yaml
+      - .github/workflows/sample-go-cicd-for-with-test.yaml
 
 # The rest of action steps are written to take in the following enviromental
 # variables. For simple setup, updating the following values should be
