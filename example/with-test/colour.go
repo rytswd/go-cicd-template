@@ -24,7 +24,7 @@ func (c HSL) ToRGB() RGB {
 
 	if s == 0 {
 		// achromatic
-		return RGB{l, l, l}
+		return RGB{math.Round(l * 255), math.Round(l * 255), math.Round(l * 255)}
 	}
 
 	var v1, v2 float64
